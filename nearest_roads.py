@@ -14,7 +14,7 @@ def pointfinder(origin):
     return location
 
 """takes a perimeter length and returns how much you need to move North, East, and Northeast for a random rectangle"""
-def translation_generator(perimeter, location):
+def generate_translation(perimeter, location):
     rand = (random.random()+1)/2
     h = rand * perimeter/4
     w = perimeter/2 - h
@@ -27,17 +27,18 @@ def translation_generator(perimeter, location):
 """takes an origin name string and a distance length and returns a dictionary of directions of points to tuples of coordinates"""
 def generate_rectangle(originAddress, distance):
     origin_dictionary = pointfinder(originAddress)
-    translations = translation_generator(distance, origin_dictionary)
+    translations = generate_translation(distance, origin_dictionary)
     origin = (origin_dictionary['lat'], origin_dictionary['lng'])
     vertical = (origin[0] + translations[0], origin[1])
     horizontal = (origin[0], origin[1] + translations[1])
     diagonal = (origin[0] + translations[0], origin[1] + translations[1])
-    return {'origin': origin, 'vertical': vertical, 'horizontal': horizontal, 'diagonal': diagonal}
+    return {'origin': origin, 'vertical': vertical, 'diagonal': diagonal, 'horizontal': horizontal}
 
 """takes a dictionary from rectangle_generator, returns points formatted for nearest road API"""
 def points_formatter(rectangle):
     formattedPoints = ''
     coordinates = rectangle.values()
+    """return coordinates"""
     for coord in coordinates:
         formattedCoord = str(coord).replace(' ', '').replace('(','').replace(')','')
         formattedPoints += '|' + formattedCoord
@@ -45,10 +46,18 @@ def points_formatter(rectangle):
     return formattedPoints[1:]
 
 """takes a formatted string of points and returns a path through the points"""
-def generate_path(points):
+def generate_waypoints(points):
     url = 'https://roads.googleapis.com/v1/nearestRoads?'
     resp = requests.get(url, params = {'points': points, 'key': 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'})
+    print(resp.json())
     results = resp.json()['snappedPoints']
+    """url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?'
+    results = []
+    for point in points:
+        resp = requests.get(url, params = {'input': point, 'inputtype': 'textquery', 'key': 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'})
+        print(point)
+        print(resp.json())
+        results.append(resp.json()['candidates'][0]['geometry']['location'])"""
     locations = []
     for result in results:
         location = result['location']
@@ -62,12 +71,11 @@ def generate_path(points):
             waypoints.append(point)
     return waypoints
 
-def full():
+def generator():
     origin = input("Origin: ")
     distance = int(input("Distance: "))
     rect = generate_rectangle(origin, distance)
     points = points_formatter(rect)
-    waypoints = generate_path(points)
+    waypoints = generate_waypoints(points)
     print(waypoints)
     return waypoints
-
