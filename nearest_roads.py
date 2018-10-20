@@ -49,7 +49,6 @@ def points_formatter(rectangle):
 def generate_waypoints(points):
     url = 'https://roads.googleapis.com/v1/nearestRoads?'
     resp = requests.get(url, params = {'points': points, 'key': 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'})
-    print(resp.json())
     results = resp.json()['snappedPoints']
     """url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?'
     results = []
@@ -77,5 +76,4 @@ def generator():
     rect = generate_rectangle(origin, distance)
     points = points_formatter(rect)
     waypoints = generate_waypoints(points)
-    print(waypoints)
     return waypoints
