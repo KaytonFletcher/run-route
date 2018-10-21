@@ -3,7 +3,6 @@ import requests
 import json
 import random
 import math
-import re
 
 class PathFinder:
     origin = None
@@ -12,7 +11,7 @@ class PathFinder:
     points = None
     directions = []
     key = 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'
-
+    total_distance = 0
     """takes an origin and returns its coordinates"""
     def pointfinder(self):
         url = 'https://maps.googleapis.com/maps/api/geocode/json'
@@ -62,18 +61,29 @@ class PathFinder:
                 else:
                     self.directions.append('east')
             else:
-                if float(self.rect[i][0])>float(self.rect[i+1][0]):
+                if float(self.rect[i][0])>float(self.rect[i+1 if i !=3 else 0][0]):
                     self.directions.append('south')
                 else:
                     self.directions.append('north')
         dir_url = 'https://maps.googleapis.com/maps/api/directions/json?'
         i = 0
+        count = 0
         max_distance = self.distance / 4
         while i<4:
+            if(count >15*self.distance):
+                print('restarting')
+                self.distance = self.distance + 0.05
+                self.directions.clear()
+                self.generate_rectangle()
+                self.generate_path()
+                return False
             dir_resp = requests.get(dir_url, params={'origin':'{},{}'.format(self.rect[i][0],self.rect[i][1]), 'destination':'{},{}'.format(self.rect[i+1 if i<3 else 0][0],self.rect[i+1 if i<3 else 0][1]),'mode': 'walking', 'key': self.key},)
             dir_results = json.loads(dir_resp.content)
             if len(dir_results["routes"]) != 0:
-                distance = float(dir_results['routes'][0]['legs'][0]['distance']['text'].replace(' mi',''))
+                try:
+                    distance = float(dir_results['routes'][0]['legs'][0]['distance']['text'].replace(' mi',''))
+                except:
+                    distance = float(dir_results['routes'][0]['legs'][0]['distance']['text'].replace(' ft', ''))/5280
             else:
                 return False
             if distance > max_distance or distance == 0:
@@ -84,10 +94,13 @@ class PathFinder:
                 elif (self.directions[i] == 'east'):
                     self.rect[i] = (self.rect[i][0], self.rect[i][1] + .001*self.distance)
                 elif (self.directions[i] == 'west'):
-                    self.rect[i] = (self.rect[i][0], self.rect[i][1] - .006*self.distance)
+                    self.rect[i] = (self.rect[i][0], self.rect[i][1] - .001*self.distance)
+                count = count + 1
             else:
+                max_distance = self.distance / 4
+                max_distance = max_distance + (distance - max_distance)
                 i = i+1
-
+                self.total_distance = self.total_distance + distance
         # roads_url = 'https://roads.googleapis.com/v1/nearestRoads?'
         # roads_resp = requests.get(roads_url, params={'points': self.points, 'key': self.key})
         # try:
@@ -117,6 +130,8 @@ def full():
     url = "https://www.google.com/maps/dir/?api=1&origin={},{}&waypoints={}&destination={},{}&travelmode=walking".format(pathfinder.rect[0][0],pathfinder.rect[0][1],pathfinder.points_formatter(),pathfinder.rect[0][0],pathfinder.rect[0][1])
     pathfinder.rect.append(url)
     l = json.dumps(pathfinder.rect)
+    print(l)
+    print(pathfinder.total_distance)
     return l
 full()
 
