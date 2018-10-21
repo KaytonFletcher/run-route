@@ -71,6 +71,7 @@ class PathFinder:
         max_distance = self.distance / 4
         while i<4:
             if(count >15*self.distance):
+                print('restarting')
                 self.distance = self.distance + 0.05
                 self.directions.clear()
                 self.generate_rectangle()
@@ -96,8 +97,6 @@ class PathFinder:
                     self.rect[i] = (self.rect[i][0], self.rect[i][1] - .001*self.distance)
                 count = count + 1
             else:
-                max_distance = self.distance / 4
-                max_distance = max_distance + (distance - max_distance)
                 i = i+1
                 self.total_distance = self.total_distance + distance
         # roads_url = 'https://roads.googleapis.com/v1/nearestRoads?'
@@ -129,6 +128,7 @@ def full():
     url = "https://www.google.com/maps/dir/?api=1&origin={},{}&waypoints={}&destination={},{}&travelmode=walking".format(pathfinder.rect[0][0],pathfinder.rect[0][1],pathfinder.points_formatter(),pathfinder.rect[0][0],pathfinder.rect[0][1])
     pathfinder.rect.append(url)
     l = json.dumps(pathfinder.rect)
+    print(l)
     return l
 full()
 
