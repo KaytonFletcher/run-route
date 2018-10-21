@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>RunRoute</title>
+        <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+        #header {
+            height: 10%;
+        }
+        #map {
+            height: 90%;
+        }
+
+        html, body {
+            height: 100%;
+        }
+    </style>
+    </head>
+    <body>
+        <div id="header">
+            <span>Origin</span><input type="text" id="origin"/><button onclick="findLocHandler()">Get current location</button>
+            <span>Distance (mi)</span><input type="text" id="dist"/><button onclick="handleRouteRequest()">Generate route</button>
+
+            <div id="mapUrl"></div>
+        </div>
+        <div id="map"></div>
+    </body>
+    <script>
+        console.log("script reached");
+        var map, geocoder, pos, resp;
+        function initMap() {
+            console.log("initMap called");
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: -34.397, lng: 150.644},
+                zoom: 8
+            });
+            geocoder = new google.maps.Geocoder();
+        }
+        function findLocHandler() {
+            navigator.geolocation.getCurrentPosition(locationToAddress, function() { alert("We need permission to get your location");})
+        }
+        function locationToAddress(posData) {
+            console.log(posData);
+            var lat = posData.coords.latitude
+            pos = new google.maps.LatLng(posData.coords.latitude, posData.coords.longitude);
+            geocoder.geocode({location : pos}, function(retVal) {
+                document.getElementById("origin").value = retVal[0].formatted_address;
+            });
+            map.setCenter(pos);
+            var marker = new google.maps.Marker({
+                position: pos,
+                map: map
+            });
+        }
+        
+        var webEndpoint = "https://us-east1-long-base-219018.cloudfunctions.net/point_generator";
+        function getRoutes() {
+            
+            fetch(new Request(webEndpoint+"?lat="+pos.latitude+"&lng="+pos.longitude+"&dist="))
+            .then((response) => {
+                resp = JSON.stringify(response);
+            });
+            var waypoints = [];
+            for (var i = 0; i < resp.length-1; ++i) {
+                waypoints.push(new google.maps.DirectionsWaypoint(new google.maps.LatLng(routes[i][0], routes[i][1])));
+            }
+            var request = {
+                origin: pos,
+                destination: pos,
+                travelMode: 
+                waypoints: waypoints,
+                optimizeWaypoints: false
+            };
+        }
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1lXDgX__CweCoIZ1HrpKQqtrviMse6TQ&callback=initMap"></script>
+</html>

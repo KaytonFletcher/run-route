@@ -3,6 +3,7 @@ import requests
 import json
 import random
 import math
+import re
 
 class PathFinder:
     origin = None
@@ -40,7 +41,7 @@ class PathFinder:
         vertical = (origin[0] + translations[0], origin[1])
         horizontal = (origin[0], origin[1] + translations[1])
         diagonal = (origin[0] + translations[0], origin[1] + translations[1])
-        return {'origin': origin, 'vertical': vertical, 'horizontal': horizontal, 'diagonal': diagonal}
+        return {'origin': origin, 'vertical': vertical, 'diagonal': diagonal, 'horizontal': horizontal}
 
     """takes a dictionary from rectangle_generator, returns points formatted for nearest road API"""
     def points_formatter(self):
@@ -58,41 +59,67 @@ class PathFinder:
         for i in range(0,4):
             if abs(float(self.points[i].split(',')[1])-float(self.points[i+1 if i !=3 else 0].split(',')[1]))>abs(float(self.points[i].split(',')[0])-float(self.points[i+1 if i !=3 else 0].split(',')[0])):
                 if float(self.points[i].split(',')[1])>float(self.points[i+1 if i !=3 else 0].split(',')[1]):
-                    self.directions.append('east')
-                else:
                     self.directions.append('west')
+                else:
+                    self.directions.append('east')
             else:
                 if float(self.points[0].split(',')[0])>float(self.points[i+1].split(',')[0]):
                     self.directions.append('south')
                 else:
                     self.directions.append('north')
-        roads_url = 'https://roads.googleapis.com/v1/nearestRoads?'
-        roads_resp = requests.get(roads_url, params = {'points': self.points, 'key': self.key})
         dir_url = 'https://maps.googleapis.com/maps/api/directions/json?'
-        distance = 0
+        # distance = 0
         waypoints = []
-        for i in range(0,4):
-            dir_resp = requests.get(dir_url, params={'origin':self.points[i], 'destination':self.points[i+1 if i !=3 else 0],'mode': 'walking', 'key': self.key},)
+        i = 0
+        max_distance = self.distance / 4
+        while i<4:
+            dir_resp = requests.get(dir_url, params={'origin':self.points[i], 'destination':self.points[i+1 if i<3 else 0],'mode': 'walking', 'key': self.key},)
             dir_results = json.loads(dir_resp.content)
-            distance = distance + float(dir_results['routes'][0]['legs'][0]['distance']['text'].replace(' mi',''))
-            if distance > self.distance/4:
-                self.points[i+1 if i !=3 else 0] = float(self.points[i+1 if i !=3 else 0].split(',')[0])-0.005
+            if len(dir_results["routes"]) != 0:
+                distance = float(dir_results['routes'][0]['legs'][0]['distance']['text'].replace(' mi',''))
+            else:
+                return False
+            if distance > max_distance or distance == 0:
+                if(self.directions[i] == 'north'):
+                    val = str(float(self.points[i+1 if i<3 else 0].split(',')[0]) - .006) + ','
+                    self.points[i+1 if i<3 else 0] = self.points[i+1 if i<3 else 0].split(',')[1]
+                    self.points[i+1 if i<3 else 0] = val + self.points[i+1 if i<3 else 0]
+                elif(self.directions[i] == 'south'):
+                    val = str(float(self.points[i + 1 if i < 3 else 0].split(',')[0]) + .006) + ','
+                    self.points[i + 1 if i < 3 else 0] = self.points[i+1 if i<3 else 0].split(',')[1]
+                    self.points[i+1 if i<3 else 0] = val + self.points[i+1 if i<3 else 0]
+                elif (self.directions[i] == 'east'):
+                    val = ',' + str(float(self.points[i + 1 if i < 3 else 0].split(',')[1]) - .006)
+                    self.points[i + 1 if i < 3 else 0] = self.points[i+1 if i<3 else 0].split(',')[0]
+                    self.points[i+1 if i<3 else 0] = self.points[i+1 if i<3 else 0] +val
+                elif (self.directions[i] == 'west'):
+                    val = ',' + str(float(self.points[i + 1 if i < 3 else 0].split(',')[1]) + .006)
+                    self.points[i + 1 if i < 3 else 0] = self.points[i+1 if i<3 else 0].split(',')[0]
+                    self.points[i+1 if i<3 else 0] = self.points[i+1 if i<3 else 0] + val
+            else:
+                max_distance = max_distance + (max_distance - distance)*.5
+                print("Found best path for {}".format(self.directions[i]))
+                i = i+1
             print(distance)
-        try:
-            roads_results = roads_resp.json()['snappedPoints']
-            locations = []
-            for result in roads_results:
-                location = result['location']
-                locations.append(location)
-            points = []
-            for location in locations:
-                points.append((location['latitude'], location['longitude']))
-            for point in points:
-                if point not in waypoints:
-                    waypoints.append(point)
-        except:
-            waypoints = self.points
-        return waypoints
+
+        # roads_url = 'https://roads.googleapis.com/v1/nearestRoads?'
+        # roads_resp = requests.get(roads_url, params={'points': self.points, 'key': self.key})
+        # try:
+        #     roads_results = roads_resp.json()['snappedPoints']
+        #     locations = []
+        #     for result in roads_results:
+        #         location = result['location']
+        #         locations.append(location)
+        #     points = []
+        #     for location in locations:
+        #         points.append((location['latitude'], location['longitude']))
+        #     for point in points:
+        #         if point not in waypoints:
+        #             waypoints.append(point)
+        # except:
+        #     return False
+        # self.points = waypoints
+        return True
 
 def full():
     pathfinder = PathFinder()
@@ -101,8 +128,10 @@ def full():
     pathfinder.distance = pathfinder.distance - pathfinder.distance*.3
     pathfinder.rect = pathfinder.generate_rectangle()
     pathfinder.points = pathfinder.points_formatter()
-    waypoints = pathfinder.generate_path()
-    print(waypoints)
-    return waypoints
+    if(pathfinder.generate_path()):
+        print(json.dumps(pathfinder.points))
+    print("https://www.google.com/maps/dir/?api=1&origin={}&waypoints={}&destination={}&travelmode=walking".format(pathfinder.points[0],pathfinder.points_formatter(),pathfinder.points[0]))
+
+    return pathfinder.points
 full()
 
