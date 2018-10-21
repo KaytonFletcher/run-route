@@ -11,7 +11,6 @@ class PathFinder:
     points = None
     directions = []
     key = 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'
-    total_distance = 0
     """takes an origin and returns its coordinates"""
     def pointfinder(self):
         url = 'https://maps.googleapis.com/maps/api/geocode/json'
@@ -98,7 +97,6 @@ class PathFinder:
                 count = count + 1
             else:
                 i = i+1
-                self.total_distance = self.total_distance + distance
         # roads_url = 'https://roads.googleapis.com/v1/nearestRoads?'
         # roads_resp = requests.get(roads_url, params={'points': self.points, 'key': self.key})
         # try:
