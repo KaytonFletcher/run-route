@@ -10,7 +10,7 @@ class PathFinder:
     rect = None
     points = None
     directions = []
-    key = 'AIzaSyAYO7T7rV7bUOer87rKnXLXXffZG_fh-LE'
+    key = 'KEY_HERE'
 
     """takes an origin and returns its coordinates"""
     def pointfinder(self):
